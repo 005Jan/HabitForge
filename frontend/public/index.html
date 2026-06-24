@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <base href="/habits/">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HabitForge — El teu tracker d'hàbits</title>
+    <meta name="description" content="HabitForge: crea, segueix i mantén els teus hàbits diaris.">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HabitForge">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-startup-image" href="apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ══ USER SELECT SCREEN ══*/
+        #userSelectScreen { position:fixed;inset:0;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:32px 16px;background:var(--bg-dark); }
+        #userSelectScreen.hidden { display:none; }
+        .us-brand { text-align:center; }
+        .us-title { font-size:2.2rem;font-weight:800;margin:0 0 8px; }
+        .us-sub { color:var(--text-secondary);font-size:0.95rem;margin:0; }
+        .user-grid { display:flex;flex-wrap:wrap;gap:14px;justify-content:center;max-width:560px;min-height:80px;align-items:center; }
+        .user-card { display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 24px;min-width:110px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:18px;cursor:pointer;user-select:none;transition:all 0.2s ease; }
+        .user-card:hover { background:rgba(139,92,246,0.13);border-color:rgba(139,92,246,0.5);transform:translateY(-3px);box-shadow:0 10px 30px rgba(139,92,246,0.2); }
+        .uc-avatar { width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:1.35rem;font-weight:700;color:#fff; }
+        .uc-avatar.admin { background:linear-gradient(135deg,#f59e0b,#ef4444); }
+        .uc-name { font-weight:600;font-size:0.95rem;text-align:center; }
+        .uc-badge { font-size:0.7rem;padding:2px 8px;border-radius:99px;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3); }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .us-loading { animation:blink 1.4s ease-in-out infinite;color:var(--text-secondary);font-size:0.9rem; }
+
+        /* ══ SKELETON LOADING ══ */
+        .hf-skeleton { height:72px;border-radius:18px;background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.04) 75%);background-size:200% 100%;animation:skeleton-shimmer 1.5s infinite; }
+        @keyframes skeleton-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+        /* ══ PULL TO REFRESH ══ */
+        #pullIndicator { position:fixed;top:0;left:50%;transform:translateX(-50%) translateY(-60px);transition:transform 0.25s ease;background:rgba(139,92,246,0.92);padding:8px 18px;border-radius:0 0 14px 14px;font-size:0.8rem;color:white;z-index:300;pointer-events:none;backdrop-filter:blur(8px); }
+        #pullIndicator.visible { transform:translateX(-50%) translateY(0); }
+
+        /* ══ CONFETTI CANVAS ══ */
+        #confettiCanvas { position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;display:none; }
+
+        /* ══ MILESTONE CELEBRATION ══ */
+        .milestone-overlay { position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(8,11,22,0.82);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px); }
+        .milestone-overlay.show { display:flex;animation:msFade 0.3s ease; }
+        @keyframes msFade { from{opacity:0} to{opacity:1} }
+        .milestone-card { text-align:center;background:linear-gradient(160deg,#1e293b,#0f172a);border:1px solid rgba(245,158,11,0.35);border-radius:26px;padding:36px 32px;max-width:340px;width:100%;box-shadow:0 24px 70px rgba(245,158,11,0.18);transform:scale(0.7);animation:msPop 0.5s cubic-bezier(.18,.89,.32,1.28) forwards; }
+        @keyframes msPop { to{transform:scale(1)} }
+        .milestone-flame { font-size:3.6rem;line-height:1;animation:msFlame 1s ease-in-out infinite alternate; }
+        @keyframes msFlame { from{transform:scale(1) rotate(-4deg)} to{transform:scale(1.15) rotate(4deg)} }
+        .milestone-streak { font-size:4.6rem;font-weight:800;line-height:1;margin-top:4px;background:linear-gradient(135deg,#f59e0b,#ef4444);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent; }
+        .milestone-days { font-size:0.82rem;font-weight:700;letter-spacing:0.18em;color:#f59e0b;margin-top:2px; }
+        .milestone-habit { font-size:1.15rem;font-weight:700;margin-top:18px;color:var(--text-primary); }
+        .milestone-msg { font-size:0.95rem;color:var(--text-secondary);margin-top:6px; }
+        .milestone-close { margin-top:24px;width:100%;padding:13px;border:none;border-radius:14px;font-family:inherit;font-size:1rem;font-weight:700;color:#fff;cursor:pointer;background:linear-gradient(135deg,#f59e0b,#ef4444);transition:transform 0.15s; }
+        .milestone-close:active { transform:scale(0.96); }
+
+        /* ══ MAIN APP ══ */
+        #mainWrapper { width:100%;max-width:660px;padding:20px 16px calc(80px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:20px; }
+
+        /* ══ VIEWS ══ */
+        .view { display:none;animation:fadeIn 0.3s ease-out forwards; }
+        .view.active { display:block; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .view-title { font-size:1.5rem;font-weight:700;margin-bottom:20px;text-align:center; }
+
+        /* ══ BOTTOM NAV ══ */
+        .bottom-nav { position:fixed;bottom:0;left:0;width:100%;display:flex;justify-content:space-around;padding:10px 0 max(10px,env(safe-area-inset-bottom));background:rgba(15,23,42,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,0.08);z-index:100; }
+        body.light-mode .bottom-nav { background:rgba(255,255,255,0.92);border-top:1px solid rgba(0,0,0,0.08); }
+        .nav-item { flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text-secondary);transition:color 0.2s;-webkit-tap-highlight-color:transparent;padding:0 4px;min-width:0; }
+        .nav-item:hover { color:var(--text-primary); }
+        .nav-icon { font-size:1.35rem;transition:transform 0.2s ease;line-height:1; }
+        .nav-item.active { color:var(--accent-cyan); }
+        .nav-item.active .nav-icon { transform:translateY(-2px) scale(1.1); }
+        .nav-label { font-size:0.65rem;font-weight:600;font-family:var(--font-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%; }
+
+        /* ══ HEADER ══ */
+        .app-header-global { display:flex;flex-direction:column;gap:4px; }
+        .hf-header-row { display:flex;align-items:center;justify-content:space-between;width:100%; }
+        .hf-logo { font-size:2rem;font-weight:800;margin:0; }
+        .hf-date { background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:6px 14px;font-size:0.85rem;color:var(--text-secondary);white-space:nowrap; }
+        .hf-quote { text-align:center;font-style:italic;font-size:0.88rem;color:var(--accent-cyan);padding:10px 16px;line-height:1.4;opacity:0.85; }
+
+        /* ══ USER BAR ══ */
+        .hf-user-bar { display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:10px 14px; }
+        .hub-avatar { width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#06b6d4);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;color:#fff;flex-shrink:0; }
+        .hub-avatar.admin { background:linear-gradient(135deg,#f59e0b,#ef4444); }
+        .hub-name { flex:1;font-weight:600;font-size:0.9rem; }
+        .btn-sm { padding:5px 12px;border-radius:8px;font-size:0.8rem;font-family:inherit;cursor:pointer;transition:all 0.15s; }
+        .btn-switch { border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--text-secondary); }
+        .btn-switch:hover { background:rgba(255,255,255,0.1);color:var(--text-primary); }
+        .btn-adm { border:1px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.08);color:#f59e0b;display:none; }
+        .btn-adm.visible { display:inline-flex;align-items:center;gap:4px; }
+        .btn-adm:hover { background:rgba(245,158,11,0.18); }
+
+        /* ══ TOGGLE SWITCH ══ */
+        .hf-toggle { position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0; }
+        .hf-toggle input { opacity:0;width:0;height:0; }
+        .hf-toggle-slider { position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:rgba(255,255,255,0.1);transition:.3s;border-radius:24px;border:1px solid rgba(255,255,255,0.2); }
+        .hf-toggle-slider:before { position:absolute;content:"";height:18px;width:18px;left:2px;bottom:2px;background-color:var(--text-secondary);transition:.3s;border-radius:50%; }
+        .hf-toggle input:checked+.hf-toggle-slider { background-color:rgba(139,92,246,0.5);border-color:#8b5cf6; }
+        .hf-toggle input:checked+.hf-toggle-slider:before { transform:translateX(20px);background-color:#fff; }
+
+        /* ══ STATS ══ */
+        .hf-stats-section { background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:16px; }
+        .hf-stats-tabs { display:flex;gap:6px;margin-bottom:14px; }
+        .hf-stab { flex:1;padding:7px 0;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-secondary);font-family:inherit;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s; }
+        .hf-stab:hover { background:rgba(255,255,255,0.1);color:var(--text-primary); }
+        .hf-stab.active { background:linear-gradient(135deg,#8b5cf6,#06b6d4);color:#fff;border-color:transparent; }
+        .hf-stats-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:8px; }
+        .hf-stat-card { background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px;text-align:center; }
+        .hf-stat-val { font-size:1.6rem;font-weight:800;line-height:1; }
+        .hf-stat-lbl { font-size:0.72rem;color:var(--text-secondary);margin-top:4px;text-transform:uppercase;letter-spacing:0.04em; }
+        .stat-purple { color:#8b5cf6; }
+        .stat-cyan { color:#06b6d4; }
+        .stat-fire { color:#f97316; }
+
+        /* ══ CHART ══ */
+        .hf-chart-wrap { margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.07); }
+        .hf-bar-chart { display:flex;align-items:flex-end;gap:4px;height:80px; }
+        .hf-bar-col { display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0; }
+        .hf-bar { width:100%;border-radius:4px 4px 0 0;transition:height 0.4s cubic-bezier(.4,0,.2,1);cursor:default; }
+        .hf-bar:hover { opacity:0.8; }
+        .hf-bar-lbl { font-size:0.6rem;color:var(--text-secondary);text-align:center;white-space:nowrap; }
+        .hf-bar-pct { font-size:0.58rem;color:rgba(255,255,255,0.5);margin-bottom:2px;min-height:10px; }
+
+        /* ══ TREND BADGE ══ */
+        .hf-trend { display:inline-flex;align-items:center;gap:4px;font-size:0.78rem;font-weight:600;padding:3px 10px;border-radius:99px;margin-top:4px; }
+        .hf-trend.up { background:rgba(16,185,129,0.12);color:#10b981; }
+        .hf-trend.down { background:rgba(239,68,68,0.12);color:#ef4444; }
+        .hf-trend.neutral { background:rgba(255,255,255,0.07);color:var(--text-secondary); }
+
+        /* ══ HEATMAP ══ */
+        .hf-heatmap { display:grid;grid-template-columns:repeat(53,1fr);gap:2px; }
+        .hf-hm-cell { aspect-ratio:1;border-radius:2px;cursor:default;transition:transform 0.1s; }
+        .hf-hm-cell:hover { transform:scale(1.4); }
+        .hf-hm-container { display:flex;align-items:flex-start;overflow-x:auto; }
+        .hf-hm-row-lbl { font-size:0.55rem;color:var(--text-secondary);width:14px;text-align:right;line-height:1; }
+
+        /* ══ BEST/WORST HABIT ══ */
+        .hf-insight-row { display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;font-size:0.85rem; }
+        .hf-insight-row.best { background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.15); }
+        .hf-insight-row.worst { background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.12); }
+        .hf-insight-icon { font-size:1.2rem; }
+        .hf-insight-info { flex:1; }
+        .hf-insight-label { font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:2px; }
+        .hf-insight-name { font-weight:600; }
+
+        /* ══ PROGRESS ══ */
+        .hf-progress-info { display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px; }
+        .hf-progress-track { height:8px;background:rgba(255,255,255,0.07);border-radius:99px;overflow:hidden; }
+        .hf-progress-fill { height:100%;background:linear-gradient(90deg,#8b5cf6,#06b6d4);border-radius:99px;width:0%;transition:width 0.5s cubic-bezier(.4,0,.2,1); }
+
+        /* ══ HABIT CARDS ══ */
+        .hf-habits-list { display:flex;flex-direction:column;gap:12px; }
+        .hf-card { display:flex;align-items:center;gap:14px;padding:16px 18px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:18px;cursor:pointer;user-select:none;transition:all 0.22s ease;position:relative;overflow:hidden; }
+        .hf-card::before { content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--hc,#8b5cf6);border-radius:99px 0 0 99px; }
+        .hf-card:hover { background:rgba(255,255,255,0.07);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.2); }
+        .hf-card.done { background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.13); }
+        .hf-card.no-toca { opacity:0.55;cursor:default;filter:grayscale(0.3); }
+        .hf-card.no-toca:hover { transform:none;box-shadow:none;background:rgba(255,255,255,0.04); }
+        .hf-badge-no-toca { font-size:0.6rem;padding:1px 6px;border-radius:99px;background:rgba(148,163,184,0.12);color:#64748b;border:1px solid rgba(148,163,184,0.2);margin-left:6px;vertical-align:middle; }
+        .hf-check { width:36px;height:36px;flex-shrink:0;border-radius:50%;border:2px solid var(--hc,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all 0.2s; }
+        .hf-card.done .hf-check { background:var(--hc,#8b5cf6);border-color:var(--hc,#8b5cf6); }
+        .hf-check-tick { display:none;color:#fff;font-weight:700; }
+        .hf-card.done .hf-check-tick { display:block; }
+        .hf-card.done .hf-check-empty { display:none; }
+        .hf-icon { font-size:1.5rem;flex-shrink:0; }
+        .hf-info { flex:1;min-width:0; }
+        .hf-nom { font-size:1rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+        .hf-card.done .hf-nom { text-decoration:line-through;color:var(--text-secondary); }
+        .hf-desc { font-size:0.78rem;color:var(--text-secondary);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+        .hf-streak-row { font-size:0.78rem;color:var(--text-secondary);margin-top:2px; }
+        .hf-fire { color:#f97316; }
+        .hf-badge-no-toca { font-size:0.65rem;padding:1px 7px;border-radius:99px;background:rgba(255,255,255,0.07);color:var(--text-secondary);border:1px solid rgba(255,255,255,0.1);margin-left:4px; }
+        .hf-card-actions { display:flex;gap:4px;opacity:0;transition:opacity 0.2s;flex-shrink:0; }
+        .hf-card:hover .hf-card-actions { opacity:1; }
+
+        /* Botons d'acció de carta */
+        .btn-del-habit,.btn-edit-habit,.btn-hist-habit,.btn-up-habit,.btn-down-habit {
+            width:28px;height:28px;border-radius:7px;cursor:pointer;border:1px solid rgba(255,255,255,0.1);
+            background:rgba(255,255,255,0.06);color:var(--text-secondary);font-size:0.75rem;
+            display:flex;align-items:center;justify-content:center;transition:all 0.15s;
+        }
+        .btn-edit-habit:hover { color:#8b5cf6;border-color:rgba(139,92,246,0.3);background:rgba(139,92,246,0.1); }
+        .btn-del-habit:hover { color:#ef4444;border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.1); }
+        .btn-hist-habit:hover { color:#06b6d4;border-color:rgba(6,182,212,0.3);background:rgba(6,182,212,0.1); }
+        .btn-up-habit:hover,.btn-down-habit:hover { color:#f59e0b;border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.1); }
+
+        /* ══ HISTORIAL PER HÀBIT ══ */
+        .hf-hist { max-height:0;overflow:hidden;transition:max-height 0.3s ease;padding:0 18px; }
+        .hf-hist.open { max-height:80px;padding:4px 18px 12px; }
+        .hf-hist-dots { display:flex;gap:5px;flex-wrap:wrap;align-items:flex-end; }
+        .hf-hist-day { display:flex;flex-direction:column;align-items:center;gap:2px; }
+        .hf-hist-dot { width:16px;height:16px;border-radius:50%;transition:transform 0.1s; }
+        .hf-hist-dot:hover { transform:scale(1.3); }
+        .hf-hist-dot-lbl { font-size:0.48rem;color:var(--text-secondary); }
+
+        @keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.3)} 100%{transform:scale(1)} }
+        .hf-check.pop { animation:pop 0.3s ease; }
+
+        /* ══ WRAP DE CARTA (carta + historial) ══ */
+        .hf-card-wrap { display:flex;flex-direction:column;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:18px;overflow:hidden;transition:box-shadow 0.22s; }
+        .hf-card-wrap:hover { box-shadow:0 8px 24px rgba(0,0,0,0.2); }
+        .hf-card-wrap .hf-card { border-radius:0;border:none;background:transparent; }
+        .hf-card-wrap .hf-card:hover { box-shadow:none; }
+        .hf-card-wrap .hf-card::before { border-radius:0; }
+
+        /* ══ EMPTY STATE ══ */
+        .hf-empty { text-align:center;color:var(--text-secondary);padding:32px;display:none; }
+        .hf-empty-emoji { font-size:3rem;display:block;margin-bottom:12px; }
+
+        /* ══ ADD HABIT FORM ══ */
+        .hf-add-toggle { width:100%;padding:14px 20px;border-radius:16px;border:1px dashed rgba(255,255,255,0.18);background:rgba(255,255,255,0.03);color:var(--text-secondary);font-family:inherit;font-size:0.95rem;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px; }
+        .hf-add-toggle:hover { border-color:rgba(139,92,246,0.5);background:rgba(139,92,246,0.07);color:var(--text-primary); }
+        .hf-add-form { display:none;flex-direction:column;gap:14px;padding:22px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:18px; }
+        .hf-add-form.open { display:flex; }
+        .hf-field { display:flex;flex-direction:column;gap:6px; }
+        .hf-label { font-size:0.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em; }
+        .hf-input { background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.1);color:var(--text-primary);padding:10px 14px;border-radius:10px;font-family:inherit;font-size:0.95rem;transition:border-color 0.2s;width:100%;box-sizing:border-box; }
+        .hf-input:focus { outline:none;border-color:#8b5cf6; }
+        textarea.hf-input { resize:vertical;min-height:60px; }
+        .emoji-grid { display:flex;flex-wrap:wrap;gap:8px; }
+        .emoji-btn { width:38px;height:38px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);font-size:1.1rem;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center; }
+        .emoji-btn:hover,.emoji-btn.sel { background:rgba(139,92,246,0.2);border-color:#8b5cf6; }
+        .color-grid { display:flex;gap:8px;flex-wrap:wrap; }
+        .color-dot { width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all 0.15s; }
+        .color-dot:hover,.color-dot.sel { border-color:#fff;transform:scale(1.15); }
+        .hf-freq-btn { padding:7px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-secondary);font-family:inherit;font-size:0.85rem;cursor:pointer;transition:all 0.2s; }
+        .hf-freq-btn:hover { background:rgba(255,255,255,0.1); }
+        .hf-freq-btn.active { background:rgba(139,92,246,0.18);border-color:rgba(139,92,246,0.5);color:#a78bfa; }
+        .hf-dies-row { display:flex;gap:6px;flex-wrap:wrap; }
+        .hf-die-btn { width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-secondary);font-family:inherit;font-size:0.78rem;font-weight:600;cursor:pointer;transition:all 0.15s; }
+        .hf-die-btn.active { background:rgba(139,92,246,0.25);border-color:rgba(139,92,246,0.6);color:#a78bfa; }
+        .hf-form-actions { display:flex;gap:10px;justify-content:flex-end; }
+        .btn-cancel { padding:10px 18px;border-radius:10px;font-family:inherit;font-size:0.9rem;cursor:pointer;transition:all 0.15s;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--text-secondary); }
+        .btn-cancel:hover { background:rgba(255,255,255,0.1); }
+
+        /* ══ ADMIN MODAL ══ */
+        .adm-box { background:#1e293b;border:1px solid rgba(255,255,255,0.1);border-radius:22px;padding:28px;width:100%;max-width:460px;display:flex;flex-direction:column;gap:20px;transform:translateY(20px);transition:transform 0.3s ease; }
+        .modal-overlay.active .adm-box { transform:translateY(0); }
+        .adm-header { display:flex;align-items:center;gap:10px; }
+        .adm-title { font-size:1.2rem;font-weight:700;flex:1; }
+        .adm-close { background:none;border:none;color:var(--text-secondary);font-size:1.3rem;cursor:pointer;padding:0;line-height:1; }
+        .adm-close:hover { color:var(--text-primary); }
+        .adm-section-label { font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-secondary);font-weight:600;margin-bottom:8px; }
+        .adm-users { display:flex;flex-direction:column;gap:8px; }
+        .adm-user-row { display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.07); }
+        .aur-av { width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;color:#fff;flex-shrink:0; }
+        .aur-av.admin { background:linear-gradient(135deg,#f59e0b,#ef4444); }
+        .aur-name { flex:1;font-size:0.9rem;font-weight:500; }
+        .aur-role { font-size:0.7rem;padding:2px 7px;border-radius:99px;background:rgba(245,158,11,0.12);color:#f59e0b; }
+        .btn-del-user { width:28px;height:28px;border-radius:8px;cursor:pointer;border:1px solid rgba(239,68,68,0.2);background:rgba(239,68,68,0.06);color:#ef4444;font-size:0.85rem;display:flex;align-items:center;justify-content:center;transition:all 0.15s; }
+        .btn-del-user:hover { background:rgba(239,68,68,0.15); }
+        .btn-del-user:disabled { opacity:0.3;cursor:default; }
+        .btn-edit-user { width:28px;height:28px;border-radius:8px;cursor:pointer;border:1px solid rgba(139,92,246,0.25);background:rgba(139,92,246,0.07);color:#8b5cf6;font-size:0.82rem;display:flex;align-items:center;justify-content:center;transition:all 0.15s; }
+        .btn-edit-user:hover { background:rgba(139,92,246,0.18); }
+        .aur-edit-form { display:none;flex-direction:column;gap:8px;padding:10px 12px;background:rgba(139,92,246,0.07);border:1px solid rgba(139,92,246,0.2);border-radius:10px;margin-top:4px; }
+        .aur-edit-form.open { display:flex; }
+        .aur-edit-row { display:flex;gap:8px;align-items:center;flex-wrap:wrap; }
+        .aur-edit-row .hf-input { flex:1;min-width:120px;padding:7px 10px;font-size:0.88rem; }
+        .aur-role-sel { background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.1);color:var(--text-primary);padding:7px 10px;border-radius:10px;font-family:inherit;font-size:0.88rem;cursor:pointer; }
+        .adm-add-row { display:flex;gap:8px; }
+        .adm-add-row .hf-input { flex:1; }
+
+        /* ══ NOTIFY HOUR SELECT ══ */
+        .notify-hour-select { background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.1);color:var(--text-primary);padding:7px 12px;border-radius:10px;font-family:inherit;font-size:0.88rem;cursor:pointer;min-width:80px; }
+        .notify-hour-select:focus { outline:none;border-color:#8b5cf6; }
+
+        /* ══ TOAST ══ */
+        .hf-toast { position:fixed;bottom:calc(72px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(160px);background:rgba(20,20,32,0.96);border:1px solid rgba(255,255,255,0.12);backdrop-filter:blur(12px);color:var(--text-primary);padding:10px 18px;border-radius:14px;font-size:0.9rem;box-shadow:0 8px 32px rgba(0,0,0,0.4);transition:transform 0.3s cubic-bezier(.4,0,.2,1);z-index:600;display:flex;align-items:center;gap:10px;white-space:nowrap;pointer-events:none; }
+        .hf-toast.show { transform:translateX(-50%) translateY(0);pointer-events:auto; }
+        .toast-undo-btn { background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);color:#a78bfa;padding:3px 10px;border-radius:8px;font-size:0.8rem;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all 0.15s; }
+        .toast-undo-btn:hover { background:rgba(139,92,246,0.35); }
+
+        /* ══ RESPONSIVE MOBILE ══ */
+        @media (max-width:600px) {
+            .hf-logo { font-size:1.6rem; }
+            .hf-date { font-size:0.78rem;padding:5px 10px; }
+            /* Accions de carta sempre visibles al mòbil */
+            .hf-card-actions { opacity:1 !important; }
+            /* Botons d'acció compactes al mòbil */
+            .btn-up-habit,.btn-down-habit,.btn-hist-habit,.btn-edit-habit,.btn-del-habit { width:26px;height:26px;font-size:0.7rem; }
+            /* Estadístiques: 2 col */
+            .hf-stat-val { font-size:1.4rem; }
+            /* Formulari: inputs grans per touch */
+            .hf-input { font-size:1rem;padding:12px 14px; }
+            .emoji-btn { width:42px;height:42px;font-size:1.2rem; }
+            .hf-die-btn { width:40px;height:40px;font-size:0.82rem; }
+            /* Cards */
+            .hf-nom { font-size:0.95rem; }
+            /* Vista profile */
+            #view-profile .hf-user-bar { flex-direction:column;text-align:center;padding:20px; }
+        }
+        @media (max-width:380px) {
+            .hf-logo { font-size:1.4rem; }
+            .hf-bar-chart { height:60px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-effects">
+        <div class="glow glow-purple"></div>
+        <div class="glow glow-cyan"></div>
+    </div>
+
+    <!-- Canvas confetti -->
+    <canvas id="confettiCanvas"></canvas>
+
+    <!-- Overlay celebració de fites -->
+    <div id="milestoneOverlay" class="milestone-overlay">
+        <div class="milestone-card">
+            <div class="milestone-flame">🔥</div>
+            <div class="milestone-streak" id="milestoneStreak">7</div>
+            <div class="milestone-days">DIES SEGUITS</div>
+            <div class="milestone-habit" id="milestoneHabit">—</div>
+            <div class="milestone-msg" id="milestoneMsg">—</div>
+            <button class="milestone-close" onclick="closeMilestone()">Genial! 🎉</button>
+        </div>
+    </div>
+
+    <!-- Pull-to-refresh indicator -->
+    <div id="pullIndicator">🔄 Allibera per actualitzar</div>
+
+    <!-- ══ PANTALLA SELECCIÓ D'USUARI ══ -->
+    <div id="userSelectScreen">
+        <div class="us-brand">
+            <h1 class="us-title">Habit<span class="text-gradient">Forge</span></h1>
+            <p class="us-sub">Selecciona el teu perfil per continuar</p>
+        </div>
+        <div class="user-grid" id="userGrid">
+            <span class="us-loading">Carregant usuaris…</span>
+        </div>
+    </div>
+
+    <!-- ══ MODAL EDITAR HÀBIT ══ -->
+    <div class="modal-overlay" id="editHabitModal">
+        <div class="adm-box" style="max-width:480px">
+            <div class="adm-header">
+                <span class="adm-title">✏️ Editar hàbit</span>
+                <button class="adm-close" onclick="closeEditModal()">✕</button>
+            </div>
+            <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+                <div class="hf-field">
+                    <label class="hf-label">Nom de l'hàbit</label>
+                    <input id="editInputNom" class="hf-input" type="text" placeholder="p.ex. Fer exercici" autocomplete="off">
+                </div>
+                <div class="hf-field">
+                    <label class="hf-label">Descripció (opcional)</label>
+                    <textarea id="editInputDesc" class="hf-input" placeholder="p.ex. 30 minuts de cardio"></textarea>
+                </div>
+                <div class="hf-field">
+                    <label class="hf-label">Icona</label>
+                    <div class="emoji-grid" id="editEmojiGrid"></div>
+                </div>
+                <div class="hf-field">
+                    <label class="hf-label">Color</label>
+                    <div class="color-grid" id="editColorGrid"></div>
+                </div>
+                <div class="hf-field">
+                    <label class="hf-label">Freqüència</label>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <button type="button" class="hf-freq-btn active" id="editFreqDaily" onclick="setEditFreq('daily')">📅 Cada dia</button>
+                        <button type="button" class="hf-freq-btn" id="editFreqCustom" onclick="setEditFreq('custom')">🗓 Dies concrets</button>
+                    </div>
+                    <div id="editDiesSelector" style="display:none;margin-top:10px">
+                        <div class="hf-dies-row">
+                            <button type="button" class="hf-die-btn active" data-d="1" onclick="toggleEditDie(this)">Dl</button>
+                            <button type="button" class="hf-die-btn active" data-d="2" onclick="toggleEditDie(this)">Dt</button>
+                            <button type="button" class="hf-die-btn active" data-d="3" onclick="toggleEditDie(this)">Dc</button>
+                            <button type="button" class="hf-die-btn active" data-d="4" onclick="toggleEditDie(this)">Dj</button>
+                            <button type="button" class="hf-die-btn active" data-d="5" onclick="toggleEditDie(this)">Dv</button>
+                            <button type="button" class="hf-die-btn active" data-d="6" onclick="toggleEditDie(this)">Ds</button>
+                            <button type="button" class="hf-die-btn active" data-d="7" onclick="toggleEditDie(this)">Dg</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="hf-form-actions">
+                    <button class="btn-cancel" onclick="closeEditModal()">Cancel·lar</button>
+                    <button class="btn-primary" style="width:auto;padding:10px 24px" onclick="saveEditHabit()">Desar canvis</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MODAL ADMIN ══ -->
+    <div class="modal-overlay" id="adminModal">
+        <div class="adm-box">
+            <div class="adm-header">
+                <span class="adm-title">⚙️ Panell d'Administració</span>
+                <button class="adm-close" onclick="closeAdminModal()">✕</button>
+            </div>
+            <div id="admPwdSection">
+                <div class="adm-section-label">Contrasenya d'administrador</div>
+                <div class="hf-field" style="margin-bottom:14px">
+                    <input type="password" id="adminPwdInput" class="hf-input" placeholder="••••••••"
+                        onkeydown="if(event.key==='Enter')verifyAdminPwd()">
+                </div>
+                <div class="hf-form-actions">
+                    <button class="btn-cancel" onclick="closeAdminModal()">Cancel·lar</button>
+                    <button class="btn-primary" style="width:auto;padding:10px 20px" onclick="verifyAdminPwd()">Entrar</button>
+                </div>
+            </div>
+            <div id="admPanelSection" style="display:none;flex-direction:column;gap:18px">
+                <div>
+                    <div class="adm-section-label">Usuaris registrats</div>
+                    <div class="adm-users" id="admUsersList"><span class="us-loading">Carregant…</span></div>
+                </div>
+                <div>
+                    <div class="adm-section-label">Crear nou usuari</div>
+                    <div class="adm-add-row">
+                        <input type="text" id="newUserNom" class="hf-input" placeholder="Nom complet"
+                            onkeydown="if(event.key==='Enter')adminCreateUser()">
+                        <button class="btn-primary" style="width:auto;padding:10px 16px;white-space:nowrap" onclick="adminCreateUser()">＋ Crear</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ APP PRINCIPAL ══ -->
+    <div class="hf-wrapper" id="mainWrapper">
+
+        <!-- Capçalera Global -->
+        <div class="app-header-global">
+            <div class="hf-header-row">
+                <h1 class="hf-logo">Habit<span class="text-gradient">Forge</span></h1>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <span class="hf-date" id="hfDate">—</span>
+                </div>
+            </div>
+            <div class="hf-quote" id="hfQuote"></div>
+        </div>
+
+        <!-- ══ PÀGINA 1: HÀBITS ══ -->
+        <section id="view-home" class="view active">
+            <!-- Progrés del dia -->
+            <div style="margin-bottom:24px">
+                <div class="hf-progress-info">
+                    <span id="progressLabel">Carregant…</span>
+                    <span id="progressPct">—</span>
+                </div>
+                <div class="hf-progress-track">
+                    <div class="hf-progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <div class="hf-habits-list" id="habitsList"></div>
+
+            <div class="hf-empty" id="emptyState">
+                <span class="hf-empty-emoji">🌱</span>
+                <p>Encara no tens cap hàbit.<br>Crea'n un per començar!</p>
+            </div>
+
+            <!-- Formulari nou hàbit -->
+            <div style="margin-top:20px">
+                <button class="hf-add-toggle" id="addToggle" onclick="toggleAddForm()">
+                    <span>＋</span> Nou hàbit
+                </button>
+                <div class="hf-add-form" id="addForm">
+                    <div class="hf-field">
+                        <label class="hf-label">Nom de l'hàbit</label>
+                        <input id="inputNom" class="hf-input" type="text" placeholder="p.ex. Fer exercici" autocomplete="off">
+                    </div>
+                    <div class="hf-field">
+                        <label class="hf-label">Descripció (opcional)</label>
+                        <textarea id="inputDesc" class="hf-input" placeholder="p.ex. 30 minuts de cardio"></textarea>
+                    </div>
+                    <div class="hf-field">
+                        <label class="hf-label">Icona</label>
+                        <div class="emoji-grid" id="emojiGrid"></div>
+                    </div>
+                    <div class="hf-field">
+                        <label class="hf-label">Color</label>
+                        <div class="color-grid" id="colorGrid"></div>
+                    </div>
+                    <div class="hf-field">
+                        <label class="hf-label">Freqüència</label>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap">
+                            <button type="button" class="hf-freq-btn active" id="freqDaily" onclick="setFreq('daily')">📅 Cada dia</button>
+                            <button type="button" class="hf-freq-btn" id="freqCustom" onclick="setFreq('custom')">🗓 Dies concrets</button>
+                        </div>
+                        <div id="diesSelector" style="display:none;margin-top:10px">
+                            <div class="hf-dies-row">
+                                <button type="button" class="hf-die-btn active" data-d="1">Dl</button>
+                                <button type="button" class="hf-die-btn active" data-d="2">Dt</button>
+                                <button type="button" class="hf-die-btn active" data-d="3">Dc</button>
+                                <button type="button" class="hf-die-btn active" data-d="4">Dj</button>
+                                <button type="button" class="hf-die-btn active" data-d="5">Dv</button>
+                                <button type="button" class="hf-die-btn active" data-d="6">Ds</button>
+                                <button type="button" class="hf-die-btn active" data-d="7">Dg</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hf-form-actions">
+                        <button class="btn-cancel" onclick="closeAddForm()">Cancel·lar</button>
+                        <button class="btn-primary" style="width:auto;padding:10px 24px" onclick="createHabit()">Crear hàbit</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ PÀGINA 2: ESTADÍSTIQUES ══ -->
+        <section id="view-stats" class="view">
+            <h2 class="view-title">El teu Resum</h2>
+            <div class="hf-stats-section" style="padding:24px;display:flex;flex-direction:column;gap:20px">
+
+                <!-- 4 targetes principals -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                    <div class="hf-stat-card" style="padding:20px">
+                        <div class="hf-stat-lbl" style="font-size:0.85rem;margin-bottom:8px">Avui</div>
+                        <div class="hf-stat-val stat-purple" id="overviewDayPct" style="font-size:2.2rem">—</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px" id="overviewDayText">0 completats</div>
+                    </div>
+                    <div class="hf-stat-card" style="padding:20px">
+                        <div class="hf-stat-lbl" style="font-size:0.85rem;margin-bottom:8px">Aquesta Setmana</div>
+                        <div class="hf-stat-val stat-cyan" id="overviewWeekPct" style="font-size:2.2rem">—</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px" id="overviewWeekText">0 completats</div>
+                        <div id="weekTrend"></div>
+                    </div>
+                    <div class="hf-stat-card" style="padding:20px">
+                        <div class="hf-stat-lbl" style="font-size:0.85rem;margin-bottom:8px">Aquest Mes</div>
+                        <div class="hf-stat-val" id="overviewMonthPct" style="color:#10b981;font-size:2.2rem">—</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px" id="overviewMonthText">0 completats</div>
+                    </div>
+                    <div class="hf-stat-card" style="padding:20px">
+                        <div class="hf-stat-lbl" style="font-size:0.85rem;margin-bottom:8px">Aquest Any</div>
+                        <div class="hf-stat-val stat-fire" id="overviewYearPct" style="font-size:2.2rem">—</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px" id="overviewYearText">0 completats</div>
+                    </div>
+                </div>
+
+                <!-- Millor ratxa -->
+                <div class="hf-stat-card" style="padding:20px;display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                        <div class="hf-stat-lbl" style="font-size:0.85rem;margin-bottom:4px">Millor Ratxa Global</div>
+                        <div class="hf-stat-val stat-fire" id="overviewStreak" style="font-size:1.8rem">—</div>
+                    </div>
+                    <div style="font-size:3rem;opacity:0.8">🔥</div>
+                </div>
+
+                <!-- Insights: millor i pitjor hàbit -->
+                <div style="display:flex;flex-direction:column;gap:8px" id="habitInsights"></div>
+
+                <!-- Gràfic 7 dies -->
+                <div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">Últims 7 dies</div>
+                    <div class="hf-bar-chart" id="weekBarChart"></div>
+                </div>
+
+                <!-- Heatmap anual -->
+                <div class="hf-chart-wrap" id="overviewYearChart">
+                    <span class="us-loading">Carregant mapa anual...</span>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ══ PÀGINA 3: PERFIL ══ -->
+        <section id="view-profile" class="view">
+            <h2 class="view-title">El teu Perfil</h2>
+            <div class="hf-user-bar profile-card-large">
+                <div class="hub-avatar" id="hubAvatar" style="width:60px;height:60px;font-size:1.8rem">?</div>
+                <div style="flex:1">
+                    <span class="hub-name" id="hubName" style="font-size:1.3rem;display:block;margin-bottom:4px">—</span>
+                    <span id="hubRole" style="font-size:0.85rem;color:var(--text-secondary);background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:10px">User</span>
+                </div>
+            </div>
+
+            <div style="margin-top:24px;display:flex;flex-direction:column;gap:12px">
+
+                <!-- Banner instal·lar PWA -->
+                <div id="pwaInstallBanner" style="display:none;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(6,182,212,0.1));border:1px solid rgba(139,92,246,0.3);border-radius:14px;padding:14px 18px">
+                    <div>
+                        <div style="font-weight:700;font-size:0.95rem">📲 Instal·la l'app</div>
+                        <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:2px">Afegeix HabitForge a la pantalla d'inici</div>
+                    </div>
+                    <button id="pwaInstallBtn" class="btn-primary" style="width:auto;padding:8px 16px;white-space:nowrap;font-size:0.85rem" onclick="installPWA()">Instal·lar</button>
+                </div>
+
+                <!-- Notificacions push -->
+                <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 18px">
+                    <div>
+                        <div style="font-weight:600;font-size:0.95rem">Notificacions Push</div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary)">Recordatoris si no has completat els teus hàbits.</div>
+                    </div>
+                    <label class="hf-toggle">
+                        <input type="checkbox" id="pushToggle" onchange="togglePushNotifications()">
+                        <span class="hf-toggle-slider"></span>
+                    </label>
+                </div>
+
+                <!-- Provar notificació -->
+                <button id="btnTestPush" class="btn-sm btn-switch" style="align-self:flex-start;padding:8px 14px" onclick="sendTestPush()">🔔 Provar notificació ara</button>
+
+                <!-- Hora de notificació -->
+                <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 18px">
+                    <div>
+                        <div style="font-weight:600;font-size:0.95rem">Hora de recordatori</div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary)">A quina hora vols el recordatori diari. "Aleatori" tria una hora diferent cada dia (9:00–21:00).</div>
+                    </div>
+                    <select id="notifyHourSel" class="notify-hour-select" onchange="updateNotifyHour()">
+                        <option value="-1">🎲 Aleatori</option>
+                        <option value="6">06:00</option><option value="7">07:00</option>
+                        <option value="8">08:00</option><option value="9">09:00</option>
+                        <option value="10">10:00</option><option value="11">11:00</option>
+                        <option value="12">12:00</option><option value="13">13:00</option>
+                        <option value="14">14:00</option><option value="15" selected>15:00</option>
+                        <option value="16">16:00</option><option value="17">17:00</option>
+                        <option value="18">18:00</option><option value="19">19:00</option>
+                        <option value="20">20:00</option><option value="21">21:00</option>
+                        <option value="22">22:00</option><option value="23">23:00</option>
+                    </select>
+                </div>
+
+                <!-- Desar configuració -->
+                <button class="btn-primary" style="background:linear-gradient(135deg,#8b5cf6,#06b6d4);font-size:1rem;padding:14px" onclick="saveProfileSettings()">💾 Desar configuració</button>
+
+                <button class="btn-primary" style="background:rgba(255,255,255,0.08);color:var(--text-primary);border:1px solid rgba(255,255,255,0.1)" onclick="switchUser()">🔄 Canviar d'usuari</button>
+                <button class="btn-primary" id="btnAdmin" style="display:none;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#f59e0b,#ef4444)" onclick="openAdminModal()">⚙️ Panell d'Administració</button>
+            </div>
+        </section>
+
+    </div><!-- /hf-wrapper -->
+
+    <!-- ══ BOTTOM NAV ══ -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="switchView('view-home')">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-label">Hàbits</span>
+        </button>
+        <button class="nav-item" onclick="switchView('view-stats')">
+            <span class="nav-icon">📊</span>
+            <span class="nav-label">Estadístiq.</span>
+        </button>
+        <button class="nav-item" onclick="switchView('view-profile')">
+            <span class="nav-icon">👤</span>
+            <span class="nav-label">Perfil</span>
+        </button>
+    </nav>
+
+    <div class="hf-toast" id="toast"><span id="toastMsg"></span></div>
+    <script src="script.js"></script>
+</body>
+</html>
