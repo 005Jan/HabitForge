@@ -66,8 +66,16 @@ async function runMigrations() {
 }
 
 // ── Helpers ────────────────────────────────────────────────────
+// Data LOCAL en format YYYY-MM-DD (respecta TZ del procés, no UTC com toISOString)
+function ymd(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
 function avuiISO() {
-    return new Date().toISOString().slice(0, 10);
+    return ymd(new Date());
 }
 
 async function calcStreak(habitId) {
@@ -75,10 +83,9 @@ async function calcStreak(habitId) {
         `SELECT data FROM registres WHERE habit_id = ? ORDER BY data DESC`, [habitId]
     );
     if (!rows.length) return 0;
-    const dates = rows.map(r => r.data instanceof Date
-        ? r.data.toISOString().slice(0, 10) : String(r.data).slice(0, 10));
+    const dates = rows.map(r => String(r.data).slice(0, 10));
     const avui = avuiISO();
-    const ahir = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const ahir = ymd(new Date(Date.now() - 86400000));
     if (dates[0] !== avui && dates[0] !== ahir) return 0;
     let streak = 1;
     for (let i = 1; i < dates.length; i++) {
@@ -136,7 +143,7 @@ async function periodStatsForUser(userId, nDays) {
     const avui = new Date(); avui.setHours(0, 0, 0, 0);
     const [habitRows] = await pool.query('SELECT * FROM habits WHERE user_id = ?', [userId]);
     const from = new Date(avui); from.setDate(from.getDate() - (nDays - 1));
-    const fromStr = from.toISOString().slice(0, 10);
+    const fromStr = ymd(from);
     const [[{ completions }]] = await pool.query(
         `SELECT COUNT(*) AS completions FROM registres r
          JOIN habits h ON h.id = r.habit_id
@@ -294,12 +301,11 @@ app.get('/api/habits/:id/history', asyncHandler(async (req, res) => {
          AND data >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
          ORDER BY data ASC`, [req.params.id, nDays]
     );
-    const doneSet = new Set(rows.map(r => r.data instanceof Date
-        ? r.data.toISOString().slice(0,10) : String(r.data).slice(0,10)));
+    const doneSet = new Set(rows.map(r => String(r.data).slice(0,10)));
     const result = [];
     for (let i = nDays - 1; i >= 0; i--) {
         const d = new Date(avui); d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().slice(0,10);
+        const dateStr = ymd(d);
         result.push({ date: dateStr, completed: doneSet.has(dateStr) });
     }
     res.json(result);
@@ -317,7 +323,7 @@ app.get('/api/stats', asyncHandler(async (req, res) => {
     const days = intervals[period] || 7;
     const avui = new Date(); avui.setHours(0, 0, 0, 0);
     const fromDate = new Date(avui); fromDate.setDate(fromDate.getDate() - (days - 1));
-    const fromDateStr = fromDate.toISOString().slice(0, 10);
+    const fromDateStr = ymd(fromDate);
     const [habitRows] = await pool.query('SELECT * FROM habits WHERE user_id = ?', [user_id]);
     const total = habitRows.length;
     const [[{ completions }]] = await pool.query(
@@ -357,7 +363,7 @@ app.get('/api/stats/days', asyncHandler(async (req, res) => {
     const n = Math.min(parseInt(days) || 7, 365);
     const avui = new Date(); avui.setHours(0, 0, 0, 0);
     const fromDate = new Date(avui); fromDate.setDate(fromDate.getDate() - (n - 1));
-    const fromDateStr = fromDate.toISOString().slice(0, 10);
+    const fromDateStr = ymd(fromDate);
     const [habitRows] = await pool.query('SELECT * FROM habits WHERE user_id = ?', [user_id]);
     const [rows] = await pool.query(
         `SELECT r.data as dateStr, COUNT(DISTINCT r.habit_id) as done
@@ -368,7 +374,7 @@ app.get('/api/stats/days', asyncHandler(async (req, res) => {
     const result = [];
     for (let i = n - 1; i >= 0; i--) {
         const d = new Date(avui); d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().slice(0, 10);
+        const dateStr = ymd(d);
         let curDayOfWeek = d.getDay(); if (curDayOfWeek === 0) curDayOfWeek = 7;
         let totalForDay = 0;
         for (const h of habitRows) {
@@ -391,13 +397,12 @@ app.get('/api/stats/overview', asyncHandler(async (req, res) => {
     if (!user_id) return res.status(400).json({ error: 'Cal user_id' });
 
     const avui = new Date(); avui.setHours(0,0,0,0);
-    const avuiStr = avui.toISOString().slice(0,10);
     const [habitRows] = await pool.query('SELECT * FROM habits WHERE user_id = ?', [user_id]);
 
     // Helper: compta maxPossible i completions per rang de dies
     async function periodStats(nDays) {
         const from = new Date(avui); from.setDate(from.getDate() - (nDays - 1));
-        const fromStr = from.toISOString().slice(0,10);
+        const fromStr = ymd(from);
         const [[{ completions }]] = await pool.query(
             `SELECT COUNT(*) AS completions FROM registres r
              JOIN habits h ON h.id = r.habit_id
@@ -438,7 +443,7 @@ app.get('/api/stats/overview', asyncHandler(async (req, res) => {
     const last7days = [];
     for (let i = 6; i >= 0; i--) {
         const d = new Date(avui); d.setDate(d.getDate() - i);
-        const ds = d.toISOString().slice(0,10);
+        const ds = ymd(d);
         let dow = d.getDay(); if (dow === 0) dow = 7;
         let total = 0;
         for (const h of habitRows) {
@@ -448,7 +453,7 @@ app.get('/api/stats/overview', asyncHandler(async (req, res) => {
             if (h.frequencia === 'daily') total++;
             else if (h.frequencia === 'custom' && String(h.dies||'').includes(String(dow))) total++;
         }
-        const found = reg7.find(r => (r.ds instanceof Date ? r.ds.toISOString().slice(0,10) : String(r.ds).slice(0,10)) === ds);
+        const found = reg7.find(r => String(r.ds).slice(0,10) === ds);
         const done = found ? parseInt(found.done) : 0;
         last7days.push({ date: ds, done, total, pct: total > 0 ? Math.round((done/total)*100) : 0 });
     }
@@ -463,7 +468,7 @@ app.get('/api/stats/overview', asyncHandler(async (req, res) => {
     const heatmap = [];
     for (let i = 364; i >= 0; i--) {
         const d = new Date(avui); d.setDate(d.getDate() - i);
-        const ds = d.toISOString().slice(0,10);
+        const ds = ymd(d);
         let dow = d.getDay(); if (dow === 0) dow = 7;
         let total = 0;
         for (const h of habitRows) {
@@ -473,7 +478,7 @@ app.get('/api/stats/overview', asyncHandler(async (req, res) => {
             if (h.frequencia === 'daily') total++;
             else if (h.frequencia === 'custom' && String(h.dies||'').includes(String(dow))) total++;
         }
-        const found = regYear.find(r => (r.ds instanceof Date ? r.ds.toISOString().slice(0,10) : String(r.ds).slice(0,10)) === ds);
+        const found = regYear.find(r => String(r.ds).slice(0,10) === ds);
         const done = found ? parseInt(found.done) : 0;
         heatmap.push({ date: ds, done, total, pct: total > 0 ? Math.round((done/total)*100) : 0 });
     }

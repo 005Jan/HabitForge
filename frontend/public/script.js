@@ -267,9 +267,9 @@ function renderHabits(habits) {
     const list = document.getElementById('habitsList');
     list.innerHTML = '';
 
-    const pendents = habits.filter(h => !h.completat_avui);
-    const completats = habits.filter(h => h.completat_avui);
-    const sorted = pendents.concat(completats);
+    // Es mostren en l'ordre manual (ordre) perquè les fletxes ▲/▼ siguin coherents.
+    // Els completats es marquen al lloc, no salten al final.
+    const sorted = habits;
 
     const empty = document.getElementById('emptyState');
     if (!sorted.length) {
@@ -1003,7 +1003,7 @@ function render7DayChart(days) {
     const pcts = days.map(function(d){ return d.total > 0 ? (d.done/d.total)*100 : 0; });
     const maxPct = Math.max.apply(null, [1].concat(pcts));
     const dayNames = ['Dg','Dl','Dt','Dc','Dj','Dv','Ds'];
-    const todayStr = new Date().toISOString().slice(0,10);
+    const todayStr = ymdLocal(new Date());
 
     days.forEach(function(d) {
         const pct = d.total > 0 ? (d.done / d.total) * 100 : 0;
@@ -1086,7 +1086,7 @@ function renderHeatmap(heatmap) {
         const weekCol = document.createElement('div');
         weekCol.style.cssText = 'display:flex;flex-direction:column;gap:3px;flex-shrink:0';
         for (var dd = 0; dd < 7; dd++) {
-            const dateStr = cur.toISOString().slice(0,10);
+            const dateStr = ymdLocal(cur);
             const pct = byDate[dateStr] !== undefined ? byDate[dateStr] : -1;
             const cell = document.createElement('div');
             cell.style.cssText = 'width:11px;height:11px;border-radius:2px;cursor:default';
@@ -1363,4 +1363,12 @@ function hideToast() {
 ══════════════════════════════════════════════ */
 function escHtml(str) {
     return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Data LOCAL en format YYYY-MM-DD (no UTC com toISOString)
+function ymdLocal(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
 }

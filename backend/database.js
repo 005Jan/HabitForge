@@ -15,6 +15,8 @@ if (process.env.DB_CLIENT === 'sqlite') {
         user: process.env.DB_USER || 'habitforge',
         password: process.env.DB_PASSWORD || 'changeme',
         database: process.env.DB_NAME || 'habitforge',
+        // Retorna DATE/DATETIME com a text 'YYYY-MM-DD' — evita desplaçaments de zona horària
+        dateStrings: true,
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,

@@ -11,6 +11,7 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-habitforge}
       MYSQL_USER: ${MYSQL_USER:-habitforge}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme}
+      TZ: ${TZ:-Europe/Madrid}
     volumes:
       - db_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -33,6 +34,7 @@ services:
       DB_PASSWORD: ${MYSQL_PASSWORD:-changeme}
       DB_NAME: ${MYSQL_DATABASE:-habitforge}
       PORT: 3000
+      TZ: ${TZ:-Europe/Madrid}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
