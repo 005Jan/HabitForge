@@ -26,6 +26,24 @@ let pendingDelete = null;
 let openHistoryId = null;
 
 /* ══════════════════════════════════════════════
+   HELPER FETCH — comprova res.ok i propaga l'error del servidor
+   (fetch NO llança en 4xx/5xx, només en fallada de xarxa)
+══════════════════════════════════════════════ */
+async function apiSend(url, method, body, headers) {
+    const res = await fetch(url, {
+        method: method,
+        headers: headers || { 'Content-Type': 'application/json' },
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) {
+        let msg = 'Error del servidor (' + res.status + ')';
+        try { const d = await res.json(); if (d && d.error) msg = d.error; } catch (e) {}
+        throw new Error(msg);
+    }
+    return res.json().catch(function(){ return {}; });
+}
+
+/* ══════════════════════════════════════════════
    INIT
 ══════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
@@ -371,12 +389,7 @@ async function toggleHabit(id) {
     if (checkEl) { checkEl.classList.add('pop'); setTimeout(function(){ checkEl.classList.remove('pop'); }, 300); }
 
     try {
-        const res = await fetch(API + '/habits/' + id + '/toggle', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: currentUser.id }),
-        });
-        const data = await res.json();
+        const data = await apiSend(API + '/habits/' + id + '/toggle', 'POST', { user_id: currentUser.id });
         h.completat_avui = data.completat;
         h.streak = data.streak;
 
@@ -534,16 +547,8 @@ async function moveHabit(e, id, direction) {
 
     try {
         await Promise.all([
-            fetch(API + '/habits/' + id + '/ordre', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ordre: theirOrdre }),
-            }),
-            fetch(API + '/habits/' + allHabits[swapIdx].id + '/ordre', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ordre: myOrdre }),
-            }),
+            apiSend(API + '/habits/' + id + '/ordre', 'PATCH', { ordre: theirOrdre }),
+            apiSend(API + '/habits/' + allHabits[swapIdx].id + '/ordre', 'PATCH', { ordre: myOrdre }),
         ]);
         allHabits[idx].ordre = theirOrdre;
         allHabits[swapIdx].ordre = myOrdre;
@@ -589,11 +594,7 @@ function undoDelete() {
 
 async function commitDelete(id) {
     try {
-        await fetch(API + '/habits/' + id, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: currentUser.id }),
-        });
+        await apiSend(API + '/habits/' + id, 'DELETE', { user_id: currentUser.id });
         allHabits = allHabits.filter(function(h){ return h.id !== id; });
         renderHabits(allHabits);
     } catch {
@@ -659,18 +660,15 @@ async function createHabit() {
     const dies = addFreq === 'custom' ? (getSelectedDies('#diesSelector') || '1234567') : '1234567';
 
     try {
-        await fetch(API + '/habits', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nom: nom, icona: icona, color: color, descripcio: desc, frequencia: frequencia, dies: dies, user_id: currentUser.id }),
-        });
+        await apiSend(API + '/habits', 'POST',
+            { nom: nom, icona: icona, color: color, descripcio: desc, frequencia: frequencia, dies: dies, user_id: currentUser.id });
         document.getElementById('inputNom').value = '';
         document.getElementById('inputDesc').value = '';
         closeAddForm();
         showToast('✅ Habit creat!');
         loadHabits();
-    } catch {
-        showToast('Error creant habit');
+    } catch (e) {
+        showToast(e.message || 'Error creant habit');
     }
 }
 
@@ -721,16 +719,13 @@ async function saveEditHabit() {
     const dies = editFreq === 'custom' ? (getSelectedDies('#editDiesSelector') || '1234567') : '1234567';
 
     try {
-        await fetch(API + '/habits/' + editingHabitId, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nom: nom, icona: icona, color: color, descripcio: desc, frequencia: frequencia, dies: dies, user_id: currentUser.id }),
-        });
+        await apiSend(API + '/habits/' + editingHabitId, 'PUT',
+            { nom: nom, icona: icona, color: color, descripcio: desc, frequencia: frequencia, dies: dies, user_id: currentUser.id });
         closeEditModal();
         showToast('✅ Habit actualitzat!');
         loadHabits();
-    } catch {
-        showToast('Error guardant canvis');
+    } catch (e) {
+        showToast(e.message || 'Error guardant canvis');
     }
 }
 
@@ -741,13 +736,9 @@ async function updateNotifyHour() {
     if (!currentUser) return;
     const hour = parseInt(document.getElementById('notifyHourSel').value, 10);
     try {
-        await fetch(API + '/users/' + currentUser.id + '/notify', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ notify_hour: hour }),
-        });
+        await apiSend(API + '/users/' + currentUser.id + '/notify', 'PATCH', { notify_hour: hour });
         currentUser.notify_hour = hour;
-    } catch {}
+    } catch (e) {}
 }
 
 async function saveProfileSettings() {
@@ -892,15 +883,11 @@ async function adminSaveUser(id) {
     const rol = rolEl ? rolEl.value : 'user';
     if (!nom) return;
     try {
-        await fetch(API + '/users/' + id, {
-            method: 'PUT',
-            headers: adminHeaders(),
-            body: JSON.stringify({ nom: nom, rol: rol }),
-        });
+        await apiSend(API + '/users/' + id, 'PUT', { nom: nom, rol: rol }, adminHeaders());
         showToast('✅ Usuari actualitzat');
         loadAdminUsers();
-    } catch {
-        showToast('Error actualitzant usuari');
+    } catch (e) {
+        showToast(e.message || 'Error actualitzant usuari');
     }
 }
 
@@ -908,27 +895,23 @@ async function adminCreateUser() {
     const nom = document.getElementById('newUserNom').value.trim();
     if (!nom) return;
     try {
-        await fetch(API + '/users', {
-            method: 'POST',
-            headers: adminHeaders(),
-            body: JSON.stringify({ nom: nom }),
-        });
+        await apiSend(API + '/users', 'POST', { nom: nom }, adminHeaders());
         document.getElementById('newUserNom').value = '';
         showToast('✅ Usuari creat!');
         loadAdminUsers();
-    } catch {
-        showToast('Error creant usuari');
+    } catch (e) {
+        showToast(e.message || 'Error creant usuari');
     }
 }
 
 async function adminDeleteUser(id) {
     if (!confirm('Eliminar aquest usuari i tots els seus habits?')) return;
     try {
-        await fetch(API + '/users/' + id, { method: 'DELETE', headers: adminHeaders() });
+        await apiSend(API + '/users/' + id, 'DELETE', undefined, adminHeaders());
         showToast('Usuari eliminat');
         loadAdminUsers();
-    } catch {
-        showToast('Error eliminant usuari');
+    } catch (e) {
+        showToast(e.message || 'Error eliminant usuari');
     }
 }
 

@@ -1,6 +1,6 @@
 // sw.js — HabitForge Service Worker v2
 
-const CACHE_NAME = 'habitforge-v9';
+const CACHE_NAME = 'habitforge-v10';
 const APP_SHELL = [
     '/habits/',
     '/habits/index.html',

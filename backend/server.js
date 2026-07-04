@@ -184,12 +184,18 @@ app.put('/api/users/:id', requireAdmin, asyncHandler(async (req, res) => {
     if (!nom || !nom.trim()) return res.status(400).json({ error: 'El nom és obligatori' });
     if (!['user', 'admin'].includes(rol)) return res.status(400).json({ error: 'Rol invàlid' });
     if (uid === 1 && rol !== 'admin') return res.status(400).json({ error: 'No es pot treure el rol admin a l\'usuari principal' });
-    const hour = (notify_hour !== undefined) ? parseInt(notify_hour) : 15;
-    const [r] = await pool.query(
-        'UPDATE users SET nom=?, rol=?, notify_hour=? WHERE id=?', [nom.trim(), rol, hour, uid]
-    );
+
+    let r;
+    if (notify_hour !== undefined) {
+        const hour = parseInt(notify_hour);
+        if (hour < -1 || hour > 23) return res.status(400).json({ error: 'Hora invàlida (-1=aleatori, 0-23)' });
+        [r] = await pool.query('UPDATE users SET nom=?, rol=?, notify_hour=? WHERE id=?', [nom.trim(), rol, hour, uid]);
+    } else {
+        // No es toca notify_hour si no s'envia (evita resetejar-la en editar nom/rol)
+        [r] = await pool.query('UPDATE users SET nom=?, rol=? WHERE id=?', [nom.trim(), rol, uid]);
+    }
     if (r.affectedRows === 0) return res.status(404).json({ error: 'Usuari no trobat' });
-    res.json({ ok: true, nom: nom.trim(), rol, notify_hour: hour });
+    res.json({ ok: true, nom: nom.trim(), rol });
 }));
 
 // PATCH sense password admin — l'usuari pot canviar la seva pròpia hora
@@ -233,28 +239,44 @@ app.get('/api/habits', asyncHandler(async (req, res) => {
     res.json(result);
 }));
 
+// Valida i normalitza freqüència + dies. Retorna {freq, dies} o {error}
+function validateHabit(body) {
+    const freq = body.frequencia || 'daily';
+    if (!['daily', 'custom'].includes(freq)) return { error: 'Freqüència invàlida' };
+    let dies = String(body.dies || '1234567');
+    if (freq === 'custom') {
+        if (!/^[1-7]{1,7}$/.test(dies)) return { error: 'Dies invàlids (han de ser dígits 1-7)' };
+    } else {
+        dies = '1234567';
+    }
+    return { freq, dies };
+}
+
 app.post('/api/habits', asyncHandler(async (req, res) => {
-    const { nom, descripcio = '', icona = '⭐', color = '#8b5cf6', user_id,
-        frequencia = 'daily', dies = '1234567' } = req.body;
-    if (!nom) return res.status(400).json({ error: 'El nom és obligatori' });
+    const { nom, descripcio = '', icona = '⭐', color = '#8b5cf6', user_id } = req.body;
+    if (!nom || !nom.trim()) return res.status(400).json({ error: 'El nom és obligatori' });
     if (!user_id) return res.status(400).json({ error: 'Cal especificar user_id' });
+    const v = validateHabit(req.body);
+    if (v.error) return res.status(400).json({ error: v.error });
     const [[{ maxOrdre }]] = await pool.query(
         'SELECT COALESCE(MAX(ordre), -1) as maxOrdre FROM habits WHERE user_id = ?', [user_id]
     );
     const ordre = maxOrdre + 1;
     const [r] = await pool.query(
         'INSERT INTO habits (user_id, nom, descripcio, icona, color, frequencia, dies, ordre) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [user_id, nom, descripcio, icona, color, frequencia, dies, ordre]
+        [user_id, nom.trim(), descripcio, icona, color, v.freq, v.dies, ordre]
     );
-    res.status(201).json({ id: r.insertId, user_id, nom, descripcio, icona, color, frequencia, dies, ordre, completat_avui: false, streak: 0 });
+    res.status(201).json({ id: r.insertId, user_id, nom: nom.trim(), descripcio, icona, color, frequencia: v.freq, dies: v.dies, ordre, completat_avui: false, streak: 0 });
 }));
 
 app.put('/api/habits/:id', asyncHandler(async (req, res) => {
-    const { nom, descripcio = '', icona, color, frequencia = 'daily', dies = '1234567' } = req.body;
-    if (!nom) return res.status(400).json({ error: 'El nom és obligatori' });
+    const { nom, descripcio = '', icona, color } = req.body;
+    if (!nom || !nom.trim()) return res.status(400).json({ error: 'El nom és obligatori' });
+    const v = validateHabit(req.body);
+    if (v.error) return res.status(400).json({ error: v.error });
     const [r] = await pool.query(
         'UPDATE habits SET nom=?, descripcio=?, icona=?, color=?, frequencia=?, dies=? WHERE id=?',
-        [nom, descripcio, icona, color, frequencia, dies, req.params.id]
+        [nom.trim(), descripcio, icona, color, v.freq, v.dies, req.params.id]
     );
     if (r.affectedRows === 0) return res.status(404).json({ error: 'Hàbit no trobat' });
     res.json({ ok: true });
