@@ -9,7 +9,15 @@ const cron = require('node-cron');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
+// La contrasenya d'admin ha de venir SEMPRE de l'entorn. Un valor per defecte
+// aquí és una porta oberta el dia que algú desplegui sense definir-la: el
+// servei arrencaria "bé" i ningú se n'assabentaria. Millor no arrencar.
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD || ADMIN_PASSWORD.length < 12) {
+    console.error('❌ ADMIN_PASSWORD no definida o massa curta (mínim 12 caràcters).');
+    console.error('   Defineix-la al .env de l\'arrel. El servidor no arrenca sense.');
+    process.exit(1);
+}
 
 // Claus VAPID per a Web Push. Defineix-les a .env per a producció.
 // Si no n'hi ha, se'n generen de temporals (les subscripcions es perdran en reiniciar).
