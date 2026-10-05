@@ -1,164 +1,167 @@
 # 🔥 HabitForge
 
-Tracker d'hàbits diari **multi-usuari**, auto-allotjat amb Docker. Progressive Web App
-instal·lable al mòbil, amb notificacions push intel·ligents, estadístiques i ratxes.
+A self-hosted, **multi-user** daily habit tracker running on Docker. Installable Progressive
+Web App with smart push notifications, statistics and streaks.
 
-> Projecte personal per practicar una stack completa i auto-allotjada:
-> API REST, base de dades relacional, PWA offline, Web Push i desplegament amb Docker + reverse proxy.
-
----
-
-## ✨ Funcionalitats
-
-- 👥 **Multi-usuari** — pantalla de selecció de perfil, sense fricció (sense contrasenya)
-- ✅ **Check-in diari** — marca/desmarca hàbits amb un toc
-- 🔥 **Ratxes** — comptador de dies consecutius per hàbit
-- 🎉 **Celebració de fites** — animació de confeti en arribar a 7, 30, 100 i 365 dies
-- 📊 **Estadístiques** — resum diari, setmanal, mensual i anual + gràfic de 7 dies i mapa de calor anual
-- 🗓 **Freqüència flexible** — cada dia o dies concrets de la setmana
-- 🎨 **Personalització** — icona i color per cada hàbit
-- ↕️ **Reordenació** — organitza els hàbits al teu gust
-- 🔔 **Notificacions push intel·ligents** *(vegeu més avall)*
-- ⚙️ **Panell d'administrador** — gestió d'usuaris protegida per contrasenya
-- 📱 **PWA** — instal·lable com a app nativa, funciona offline (app shell cachejat)
+> A personal project to practise a complete self-hosted stack:
+> REST API, relational database, offline PWA, Web Push and deployment with Docker + reverse proxy.
+>
+> The app's interface is in Catalan.
 
 ---
 
-## 🔔 Notificacions intel·ligents
+## ✨ Features
 
-Un únic recordatori diari sol ser insuficient. HabitForge envia, com a màxim, **una notificació
-per hora i usuari**, amb un sistema de prioritats perquè motivi sense atabalar:
+- 👥 **Multi-user**: a frictionless profile picker (no password)
+- ✅ **Daily check-in**: tick or untick a habit with a single tap
+- 🔥 **Streaks**: counter of consecutive days per habit
+- 🎉 **Milestone celebrations**: confetti animation at 7, 30, 100 and 365 days
+- 📊 **Statistics**: daily, weekly, monthly and yearly summary, plus a 7-day chart and a yearly heatmap
+- 🗓 **Flexible frequency**: every day or specific days of the week
+- 🎨 **Customisation**: an icon and colour for each habit
+- ↕️ **Reordering**: arrange your habits however you like
+- 🔔 **Smart push notifications** *(see below)*
+- ⚙️ **Admin panel**: password-protected user management
+- 📱 **PWA**: installable as a native app, works offline (cached app shell)
 
-| Notificació | Quan | Objectiu |
+---
+
+## 🔔 Smart notifications
+
+A single daily reminder is usually not enough. HabitForge sends **at most one notification
+per user per hour**, with a priority system designed to motivate without nagging:
+
+| Notification | When | Goal |
 |---|---|---|
-| **Recordatori diari** | A l'hora escollida (o **aleatòria** cada dia) | Recordar els hàbits pendents |
-| **Ratxa en perill** | 20:00, si un hàbit amb ratxa ≥ 3 dies segueix pendent | Evitar trencar ratxes llargues |
-| **Última oportunitat** | 21:00, si encara queden pendents | Recuperar el dia abans que acabi |
-| **Resum setmanal** | Diumenge 19:00 | % completat i motivació |
+| **Daily reminder** | At the chosen time (or a **random** time each day) | Remind you of pending habits |
+| **Streak at risk** | 20:00, if a habit with a streak ≥ 3 days is still pending | Avoid breaking long streaks |
+| **Last chance** | 21:00, if anything is still pending | Rescue the day before it ends |
+| **Weekly summary** | Sunday 19:00 | Completion % and motivation |
 
-Tot és condicional: si ja ho tens tot fet, no reps res. Les subscripcions caducades es netegen soles.
+Everything is conditional: if you've already done everything, you get nothing. Expired
+subscriptions are cleaned up automatically.
 
 ---
 
-## 🧱 Stack tècnic
+## 🧱 Tech stack
 
-| Capa | Tecnologia |
+| Layer | Technology |
 |------|-----------|
-| Frontend | HTML + CSS + **JavaScript vanilla** (sense frameworks), servit per **Nginx** |
+| Frontend | HTML + CSS + **vanilla JavaScript** (no frameworks), served by **Nginx** |
 | Backend | **Node.js** + Express |
-| Base de dades | **MariaDB 10.11** |
-| Infraestructura | **Docker Compose** (provat en ARM64 i x86) |
-| Reverse proxy | **Traefik v2** amb TLS automàtic (Let's Encrypt) |
+| Database | **MariaDB 10.11** |
+| Infrastructure | **Docker Compose** (tested on ARM64 and x86) |
+| Reverse proxy | **Traefik v2** with automatic TLS (Let's Encrypt) |
 | Push | **Web Push API** + VAPID |
 
-Sense dependències de frontend: tota la lògica de la PWA (Service Worker, push, offline,
-gràfics, animacions) està escrita a mà amb JS vanilla.
+No frontend dependencies: all the PWA logic (Service Worker, push, offline, charts,
+animations) is hand-written in vanilla JS.
 
 ---
 
-## 📁 Estructura del projecte
+## 📁 Project structure
 
 ```
 HabitForge/
 ├── backend/
-│   ├── server.js          # API REST (Express) + cron de notificacions
-│   ├── database.js        # Pool de connexions MariaDB
-│   ├── database-sqlite.js # Alternativa SQLite per a desenvolupament local
+│   ├── server.js          # REST API (Express) + notification cron
+│   ├── database.js        # MariaDB connection pool
+│   ├── database-sqlite.js # SQLite alternative for local development
 │   ├── Dockerfile
 │   └── .env.example
 ├── frontend/
 │   ├── public/
-│   │   ├── index.html     # Interfície (SPA)
-│   │   ├── script.js      # Lògica del client
+│   │   ├── index.html     # Interface (SPA)
+│   │   ├── script.js      # Client logic
 │   │   ├── style.css
 │   │   ├── sw.js          # Service Worker (offline + Web Push)
-│   │   └── manifest.json  # Manifest PWA
-│   ├── nginx.conf         # Serveix estàtics + proxy /api → backend
+│   │   └── manifest.json  # PWA manifest
+│   ├── nginx.conf         # Serves static files + proxies /api → backend
 │   └── Dockerfile
-├── init.sql               # Esquema inicial de la BD
+├── init.sql               # Initial database schema
 ├── docker-compose.yml
-└── .env.example           # Variables d'entorn (còpia a .env)
+└── .env.example           # Environment variables (copy to .env)
 ```
 
 ---
 
-## 🚀 Posada en marxa
+## 🚀 Getting started
 
-### Requisits
-- Docker i Docker Compose
-- *(Opcional)* Traefik a la xarxa `proxy_net` per a HTTPS amb domini propi. Sense Traefik,
-  adapta el `docker-compose.yml` per exposar el port del frontend.
+### Requirements
+- Docker and Docker Compose
+- *(Optional)* Traefik on the `proxy_net` network for HTTPS on your own domain. Without
+  Traefik, adapt `docker-compose.yml` to expose the frontend port.
 
-### 1. Variables d'entorn
+### 1. Environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-Edita `.env` i omple els valors. Per generar les claus VAPID (necessàries per a les push):
+Edit `.env` and fill in the values. To generate the VAPID keys (required for push):
 
 ```bash
 node -e "console.log(require('web-push').generateVAPIDKeys())"
 ```
 
-| Variable | Descripció |
+| Variable | Description |
 |---|---|
-| `MYSQL_ROOT_PASSWORD` / `MYSQL_PASSWORD` | Contrasenyes de la base de dades |
-| `ADMIN_PASSWORD` | Contrasenya del panell d'administració |
-| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Claus Web Push |
-| `VAPID_SUBJECT` | Contacte del remitent, p. ex. `mailto:admin@exemple.com` |
-| `HABITFORGE_HOST` | Domini públic (per a Traefik). Local: `localhost` |
-| `TZ` | Zona horària (afecta recordatoris i el càlcul del dia) |
+| `MYSQL_ROOT_PASSWORD` / `MYSQL_PASSWORD` | Database passwords |
+| `ADMIN_PASSWORD` | Admin panel password |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push keys |
+| `VAPID_SUBJECT` | Sender contact, e.g. `mailto:admin@example.com` |
+| `HABITFORGE_HOST` | Public domain (for Traefik). Local: `localhost` |
+| `TZ` | Time zone (affects reminders and when the day rolls over) |
 
-### 2. Aixecar els serveis
+### 2. Start the services
 
 ```bash
 docker compose up -d --build
 ```
 
-Amb Traefik, l'app queda a `https://<HABITFORGE_HOST>/habits`.
+With Traefik, the app is served at `https://<HABITFORGE_HOST>/habits`.
 
 ---
 
-## 🔌 API REST
+## 🔌 REST API
 
-**Usuaris**
-| Mètode | Endpoint | Descripció |
+**Users**
+| Method | Endpoint | Description |
 |--------|----------|-----------|
-| GET | `/api/users` | Llista d'usuaris |
-| POST | `/api/users` | Crear usuari *(admin)* |
-| PUT | `/api/users/:id` | Editar usuari *(admin)* |
-| DELETE | `/api/users/:id` | Eliminar usuari *(admin)* |
-| PATCH | `/api/users/:id/notify` | Canviar l'hora de recordatori |
-| POST | `/api/auth/admin` | Validar contrasenya d'admin |
+| GET | `/api/users` | List users |
+| POST | `/api/users` | Create a user *(admin)* |
+| PUT | `/api/users/:id` | Edit a user *(admin)* |
+| DELETE | `/api/users/:id` | Delete a user *(admin)* |
+| PATCH | `/api/users/:id/notify` | Change the reminder time |
+| POST | `/api/auth/admin` | Validate the admin password |
 
-**Hàbits i registres**
-| Mètode | Endpoint | Descripció |
+**Habits and logs**
+| Method | Endpoint | Description |
 |--------|----------|-----------|
-| GET | `/api/habits?user_id=X` | Hàbits d'un usuari (amb ratxa i estat d'avui) |
-| POST | `/api/habits` | Crear hàbit |
-| PUT | `/api/habits/:id` | Editar hàbit |
-| PATCH | `/api/habits/:id/ordre` | Reordenar |
-| DELETE | `/api/habits/:id` | Eliminar hàbit |
-| POST | `/api/habits/:id/toggle` | Marcar/desmarcar avui |
-| GET | `/api/habits/:id/history?days=N` | Historial d'un hàbit |
+| GET | `/api/habits?user_id=X` | A user's habits (with streak and today's status) |
+| POST | `/api/habits` | Create a habit |
+| PUT | `/api/habits/:id` | Edit a habit |
+| PATCH | `/api/habits/:id/ordre` | Reorder |
+| DELETE | `/api/habits/:id` | Delete a habit |
+| POST | `/api/habits/:id/toggle` | Tick/untick for today |
+| GET | `/api/habits/:id/history?days=N` | A habit's history |
 
-**Estadístiques i push**
-| Mètode | Endpoint | Descripció |
+**Statistics and push**
+| Method | Endpoint | Description |
 |--------|----------|-----------|
-| GET | `/api/stats/overview?user_id=X` | Resum complet (dia/setmana/mes/any, ratxes, 7 dies, heatmap) |
-| GET | `/api/vapid-public-key` | Clau pública VAPID |
-| POST | `/api/subscribe` · `/api/unsubscribe` | Gestió de subscripcions push |
-| POST | `/api/push/test` | Enviar una notificació de prova |
+| GET | `/api/stats/overview?user_id=X` | Full summary (day/week/month/year, streaks, 7 days, heatmap) |
+| GET | `/api/vapid-public-key` | VAPID public key |
+| POST | `/api/subscribe` · `/api/unsubscribe` | Manage push subscriptions |
+| POST | `/api/push/test` | Send a test notification |
 | GET | `/api/health` | Health check |
 
 ---
 
 ## 📝 Notes
 
-- Les contrasenyes i claus reals viuen a `.env` (ignorat per git). Mai es publiquen secrets.
-- La base de dades usa la zona horària de `TZ` perquè les ratxes i el canvi de dia siguin correctes.
+- Real passwords and keys live in `.env` (ignored by git). Secrets are never published.
+- The database uses the `TZ` time zone so that streaks and the day rollover are correct.
 
-## 📄 Llicència
+## 📄 License
 
-MIT — vegeu [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
